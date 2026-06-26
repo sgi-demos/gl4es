@@ -3,7 +3,7 @@
 GL4ES - OpenGL for GLES Hardware
 ====
 
-![gl4es build status](https://api.travis-ci.org/ptitSeb/gl4es.png "gl4es build status")
+*This fork enables gl4es to work with an external GLES2 provider.  This is needed to get legacy GLUT apps running on the SDL2/GLES2 port of [freeglut](https://github.com/sgi-demos/freeglut).  See [COMPILE.md](COMPILE.md) for further details.*
 
 This is a library provide OpenGL 2.x functionality for GLES2.0 accelerated Hardware (and of course also support OpenGL 1.5 function, sometimes better than when using GLES 1.1 backend)
 There is also support for GLES 1.1 Hardware, emulating OpenGL 1.5, and some OpenGL 2.x+ extensions.
