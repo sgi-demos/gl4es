@@ -6,7 +6,7 @@ It's better to define the CMake Build type, preferably `RelWithDebInfo`, that de
 ---
 
 `mkdir build; cd build; cmake .. -DPANDORA=1 -DCMAKE_BUILD_TYPE=RelWithDebInfo; make`
-    
+
 *Raspberry Pi*
 ---
 
@@ -56,7 +56,36 @@ cmake .. -G Xcode -DCMAKE_TOOLCHAIN_FILE={where ios.toolchain.cmake is located} 
 cmake --build . --config Release --target GL
 ```
 
-Use with [ios-cmake](https://github.com/leetal/ios-cmake) 
+Use with [ios-cmake](https://github.com/leetal/ios-cmake)
+
+*SDL2 + ANGLE (or any externally-created GLES2/EGL context)*
+---
+
+For desktop/web use where SDL2 (or your app) owns the GLES2 context — e.g.
+ANGLE on macOS or Windows, native EGL on Linux, WebGL via Emscripten — build
+gl4es with no windowing of its own and let the host supply the context:
+
+`mkdir build; cd build; cmake .. -DNOX11=ON -DNOEGL=ON -DDEFAULT_ES=2 -DSTATICLIB=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo; make`
+
+Or simply run:
+
+`build_with_external_gles2.sh`.
+
+This produces a static `lib/libGL.a`. Because EGL/X11 are disabled, your code
+must, after creating and making current the GLES2 context, and before any GL
+call (see `include/gl4esinit.h`):
+
+    set_getprocaddress(SDL_GL_GetProcAddress);   // resolve GLES2 entry points
+    set_getmainfbsize(your_fb_size_callback);    // report default FB size
+    initialize_gl4es();
+
+Optionally add `-DNO_LOADER=ON -DNO_INIT_CONSTRUCTOR=ON` so gl4es never tries
+to load a GLES library or self-initialize via a constructor — recommended for
+this externally-created-context setup.
+
+On macOS (AppleClang), this build also requires the one-line `AliasDecl` fix in
+`src/gl/attributes.h` (guarding the `__attribute__((alias))` path with
+`!defined(__APPLE__)`), since Mach-O does not support symbol aliases.
 
 *Custom build*
 ---

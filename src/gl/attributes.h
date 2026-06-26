@@ -53,7 +53,7 @@
 #endif
 
 #ifndef AliasDecl
- #ifdef __GNUC__
+ #if defined(__GNUC__) && !defined(__APPLE__)
   #define AliasDecl(RET,NAME,DEF,OLD) \
    RET APIENTRY_GL4ES NAME DEF __attribute__((alias(_STM(OLD,DEF))))
  #elif defined(_MSC_VER)
