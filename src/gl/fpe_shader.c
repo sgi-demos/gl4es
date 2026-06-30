@@ -910,7 +910,7 @@ const char* const* fpe_FragmentShader(shaderconv_need_t* need, fpe_state_t *stat
         int t = state->texture[i].textype;
         if(point && !pointsprite) t=0;
         if(!is_default)
-            if(t && !need->need_texs&(1<<i))
+            if(t && !(need->need_texs&(1<<i)))
                 t = 0;
         if(t) {
             sprintf(buff, "varying highp %s _gl4es_TexCoord_%d;\n", texvecsize[t-1], i);

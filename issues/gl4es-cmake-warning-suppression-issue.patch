@@ -1,0 +1,33 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index abbc84d..39c9f65 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -237,10 +237,9 @@ if(NOT WIN32_MSVC)
+        set(CMAKE_SHARED_LINKER_FLAGS "-Wl,--exclude-all-symbols,--kill-at")
+     endif()
+ elseif(CMAKE_C_COMPILER_ID MATCHES "Clang")
+-    add_definitions(-Wno-deprecated-declarations) #strdup
+-    add_definitions(-Wno-unused-function -Wno-unused-variable -Wno-dangling-else)
+-    add_definitions(-Wno-implicit-const-int-float-conversion)
+-    add_definitions(-Wno-visibility)
++    # Clang warning suppressions are applied in the consolidated Clang/Emscripten
++    # block below, so they also cover non-MSVC Clang (which takes the first
++    # branch above and would otherwise never reach this elseif).
+ else()
+     if(CMAKE_C_COMPILER_ID MATCHES "Intel")
+         add_definitions(-wd1786 -wd589 -wd537 -wd118 -wd2722)
+@@ -250,8 +249,12 @@ else()
+     add_definitions("-Dinline=__inline" "-D__func__=__FUNCTION__") # for VC<=13
+ endif()
+ 
+-if (CMAKE_CC_COMPILER_ID MATCHES "Clang" OR CMAKE_SYSTEM_NAME MATCHES "Emscripten")
+-    add_definitions(-Wno-pointer-sign -Wno-dangling-else)
++if (CMAKE_C_COMPILER_ID MATCHES "Clang" OR CMAKE_SYSTEM_NAME MATCHES "Emscripten")
++    add_definitions(-Wno-pointer-sign -Wno-dangling-else
++                    -Wno-deprecated-declarations          # strdup
++                    -Wno-unused-function -Wno-unused-variable
++                    -Wno-implicit-const-int-float-conversion
++                    -Wno-visibility)
+ endif()
+ 
+ include_directories(include)
