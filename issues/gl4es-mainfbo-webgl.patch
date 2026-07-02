@@ -1,0 +1,45 @@
+diff --git a/src/gl/framebuffers.c b/src/gl/framebuffers.c
+index 4b104ab..c04b12f 100644
+--- a/src/gl/framebuffers.c
++++ b/src/gl/framebuffers.c
+@@ -1215,19 +1215,40 @@
+         gles_glGenRenderbuffers(1, &glstate->fbo.mainfbo_dep);
+         gles_glGenRenderbuffers(1, &glstate->fbo.mainfbo_ste);
+     }
++#ifdef __EMSCRIPTEN__
++    // WebGL restrictions: DEPTH_COMPONENT24 is not a valid renderbuffer
++    // format (WebGL1 core allows only DEPTH_COMPONENT16), and separate
++    // DEPTH + STENCIL attachments are forbidden (a framebuffer must use a
++    // single packed DEPTH_STENCIL renderbuffer on DEPTH_STENCIL_ATTACHMENT).
++    // Use one packed depth+stencil renderbuffer; mainfbo_ste stays unused.
++#ifndef GL_DEPTH_STENCIL
++#define GL_DEPTH_STENCIL 0x84F9
++#endif
++    gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
++    gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_STENCIL, width, height);
++    gles_glBindRenderbuffer(GL_RENDERBUFFER, 0);
++#else
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.mainfbo_ste);
+     gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_STENCIL_INDEX8, width, height);
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
+     gles_glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT24, width, height);
+     gles_glBindRenderbuffer(GL_RENDERBUFFER, 0);
++#endif
+     // create a fbo
+     if(createIt)
+         gles_glGenFramebuffers(1, &glstate->fbo.mainfbo_fbo);
+     gles_glBindFramebuffer(GL_FRAMEBUFFER, glstate->fbo.mainfbo_fbo);
+     
+     // re-attach, even if not creating the fbo...
++#ifdef __EMSCRIPTEN__
++#ifndef GL_DEPTH_STENCIL_ATTACHMENT
++#define GL_DEPTH_STENCIL_ATTACHMENT 0x821A
++#endif
++    gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_STENCIL_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
++#else
+     gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_STENCIL_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_ste);
+     gles_glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_RENDERBUFFER, glstate->fbo.mainfbo_dep);
++#endif
+     
+     gles_glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, glstate->fbo.mainfbo_tex, 0);
+ 
