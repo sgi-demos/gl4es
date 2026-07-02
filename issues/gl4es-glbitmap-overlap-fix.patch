@@ -1,0 +1,55 @@
+diff --git a/src/gl/raster.c b/src/gl/raster.c
+index 1235a49d..5c3b058b 100644
+--- a/src/gl/raster.c
++++ b/src/gl/raster.c
+@@ -466,6 +466,10 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
+ 	for (int i=0; i<4; i++)
+ 		col[i] = glstate->color[i]*255.f;
+     // copy to pixel data
++	// Per the GL spec, glBitmap only SETS pixels where the bitmap bit is 1;
++	// zero bits leave the framebuffer untouched. Writing zeros here would
++	// erase previously accumulated bitmaps wherever glyph boxes overlap
++	// (e.g. adjacent characters of an oblique font), so skip them.
+ 	if (pixtrans) {
+         for (int y = sy; y < ey; ++y) {
+ 			int by = floor(y/zoomy);
+@@ -474,12 +478,14 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
+             for (int x = sx; x < ex; ++x) {
+ 				int bx = floor(x/zoomx);
+                 GLubyte b = from[(bx / 8)];
+-                int p = (b & (1 << (7 - (bx % 8)))) ? 1 : 0;
+-                // r, g, b, a
+-				*to++ = raster_transform(col[0]*p, 0);
+-				*to++ = raster_transform(col[1]*p, 1);
+-				*to++ = raster_transform(col[2]*p, 2);
+-				*to++ = raster_transform(col[3]*p, 3);
++                if (b & (1 << (7 - (bx % 8)))) {
++                    // r, g, b, a
++					*to++ = raster_transform(col[0], 0);
++					*to++ = raster_transform(col[1], 1);
++					*to++ = raster_transform(col[2], 2);
++					*to++ = raster_transform(col[3], 3);
++				} else
++					to += 4;
+ 			}
+         }
+ 	} else {
+@@ -490,11 +496,13 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
+             for (int x = sx; x < ex; ++x) {
+ 				int bx = floor(x/zoomx);
+                 GLubyte b = from[(bx / 8)];
+-                int p = (b & (1 << (7 - (bx % 8)))) ? 1 : 0;
+-				*to++ = col[0]*p;
+-				*to++ = col[1]*p;
+-				*to++ = col[2]*p;
+-				*to++ = col[3]*p;
++                if (b & (1 << (7 - (bx % 8)))) {
++					*to++ = col[0];
++					*to++ = col[1];
++					*to++ = col[2];
++					*to++ = col[3];
++				} else
++					to += 4;
+ 			}
+         }
+     }
