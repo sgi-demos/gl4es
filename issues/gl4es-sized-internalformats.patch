@@ -1,0 +1,20 @@
+diff --git a/src/gl/texture.c b/src/gl/texture.c
+index c0d479a8..91ddc3f5 100644
+--- a/src/gl/texture.c
++++ b/src/gl/texture.c
+@@ -242,6 +242,7 @@ static void *swizzle_texture(GLsizei width, GLsizei height,
+                 break;
+             case GL_COMPRESSED_LUMINANCE:
+                 *format = GL_LUMINANCE;
++            case GL_LUMINANCE8:   // sized format sent by legacy scene graphs
+             case GL_LUMINANCE:
+                 dest_format = GL_LUMINANCE;
+                 break;
+@@ -319,6 +320,7 @@ static void *swizzle_texture(GLsizei width, GLsizei height,
+                 }
+                 break;
+             // vvvvv all this are internal formats, so it should not happens
++            case GL_RGB4:   // sized formats sent by legacy scene graphs
+             case GL_RGB5:
+             case GL_RGB565:
+                 dest_format = GL_RGB;
