@@ -34,14 +34,24 @@ void APIENTRY_GL4ES gl4es_glRasterPos3f(GLfloat x, GLfloat y, GLfloat z) {
     matrix_transpose(glmatrix, modelview);
     matrix_vector(modelview, transl, t);
     matrix_vector(projection, t, transl);
+    // perspective divide: transl is in clip coordinates; without dividing
+    // by w a perspective projection (w = -z_eye != 1) lands the raster pos
+    // far outside the window and bitmap text silently never draws
+    if (transl[3] <= 0.0f)
+        return;
+    transl[0] /= transl[3];
+    transl[1] /= transl[3];
+    transl[2] /= transl[3];
     GLfloat w2, h2;
     w2=glstate->raster.viewport.width/2.0f;
     h2=glstate->raster.viewport.height/2.0f;
-    
+
     if ((transl[0] * w2 + w2) >= 0 && (transl[1] * h2 + h2) >= 0 && transl[2] >= 0) {
       glstate->raster.rPos.x = transl[0]*w2+w2;
       glstate->raster.rPos.y = transl[1]*h2+h2;
       glstate->raster.rPos.z = transl[2];
+      memcpy(glstate->raster.rPos.color, glstate->color, 4*sizeof(GLfloat));
+      glstate->raster.rPos.colorValid = 1;
     }
 }
 #if !defined(NO_EGL) && !defined(NOX11)
@@ -59,7 +69,9 @@ void APIENTRY_GL4ES gl4es_glWindowPos3f(GLfloat x, GLfloat y, GLfloat z) {
     if (x >= 0 && y >= 0 && z >= 0) {
       glstate->raster.rPos.x = x;
       glstate->raster.rPos.y = y;
-      glstate->raster.rPos.z = z;	
+      glstate->raster.rPos.z = z;
+      memcpy(glstate->raster.rPos.color, glstate->color, 4*sizeof(GLfloat));
+      glstate->raster.rPos.colorValid = 1;
     }
 }
 
@@ -398,9 +410,18 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
 		l->yorig = yorig;
 		l->xmove = xmove;
 		l->ymove = ymove;
-		int sz = ((width+7)/8)*height;
-		l->bitmap = (GLubyte*)malloc(sz);
-		memcpy(l->bitmap, bitmap, sz);
+		// normalize rows to tight packing; the source rows are padded to
+		// GL_UNPACK_ALIGNMENT (the GL default is 4), and the replay path
+		// draws with alignment 1
+		{
+			int align = glstate->texture.unpack_align;
+			int dstrow = (width+7)/8;
+			int srcrow = (dstrow + align-1) & ~(align-1);
+			l->bitmap = (GLubyte*)malloc(dstrow*height);
+			if (bitmap)
+				for (int j = 0; j < height; j++)
+					memcpy(l->bitmap + j*dstrow, bitmap + j*srcrow, dstrow);
+		}
 		return;
 	}
   if (((!width && !height) || (bitmap==0)) && glstate->raster.rPos.x + xmove >= 0 && glstate->raster.rPos.y + ymove >= 0) {
@@ -462,9 +483,13 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
 	int pixtrans=raster_need_transform();
     const GLubyte *from;
     GLubyte *to;
+	// rows are padded to GL_UNPACK_ALIGNMENT (GL default 4)
+	int rowbytes = (((width+7)/8) + glstate->texture.unpack_align-1) & ~(glstate->texture.unpack_align-1);
 	GLubyte col[4];
+	// the raster color is latched when the raster position is set
+	const GLfloat *rcol = glstate->raster.rPos.colorValid ? glstate->raster.rPos.color : glstate->color;
 	for (int i=0; i<4; i++)
-		col[i] = glstate->color[i]*255.f;
+		col[i] = rcol[i]*255.f;
     // copy to pixel data
 	// Per the GL spec, glBitmap only SETS pixels where the bitmap bit is 1;
 	// zero bits leave the framebuffer untouched. Writing zeros here would
@@ -473,7 +498,7 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
 	if (pixtrans) {
         for (int y = sy; y < ey; ++y) {
 			int by = floor(y/zoomy);
-            from = bitmap + (by * ((width+7)/8));
+            from = bitmap + (by * rowbytes);
 			to = glstate->raster.bitmap + 4 * (GLint)(rx+((ry+y) * glstate->raster.bm_width));
             for (int x = sx; x < ex; ++x) {
 				int bx = floor(x/zoomx);
@@ -491,7 +516,7 @@ void APIENTRY_GL4ES gl4es_glBitmap(GLsizei width, GLsizei height, GLfloat xorig,
 	} else {
         for (int y = sy; y < ey; ++y) {
 			int by = floor(y/zoomy);
-            from = bitmap + (by * ((width+7)/8));
+            from = bitmap + (by * rowbytes);
 			to = glstate->raster.bitmap + 4 * (GLint)(rx+((ry+y) * glstate->raster.bm_width));
             for (int x = sx; x < ex; ++x) {
 				int bx = floor(x/zoomx);

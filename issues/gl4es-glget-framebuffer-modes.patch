@@ -1,0 +1,58 @@
+diff --git a/src/gl/const.h b/src/gl/const.h
+index 3d9563c3..26e8dbf0 100644
+--- a/src/gl/const.h
++++ b/src/gl/const.h
+@@ -8,6 +8,9 @@
+ #define GL_MAJOR_VERSION            0x821B
+ #define GL_MINOR_VERSION            0x821C
+ #define GL_DOUBLEBUFFER				0x0C32
++#define GL_INDEX_MODE				0x0C30
++#define GL_RGBA_MODE				0x0C31
++#define GL_STEREO				0x0C33
+ /* texture mapping */
+ #define GL_TEXTURE_ENV              0x2300
+ #define GL_TEXTURE_ENV_MODE         0x2200
+diff --git a/src/gl/getter.c b/src/gl/getter.c
+index 3a9acc55..21aa211c 100644
+--- a/src/gl/getter.c
++++ b/src/gl/getter.c
+@@ -295,6 +295,13 @@ int gl4es_commonGet(GLenum pname, GLfloat *params) {
+         case GL_DOUBLEBUFFER:
+             *params = 1;    // Fake double buffering...
+             break;
++        case GL_RGBA_MODE:
++            *params = 1;    // GLES framebuffers are always RGBA...
++            break;
++        case GL_INDEX_MODE:
++        case GL_STEREO:
++            *params = 0;    // ...never color-index, never stereo
++            break;
+         case GL_MAX_ELEMENTS_INDICES:
+             *params = 1024;
+             break;
+diff --git a/src/gl/wrap/gles.c b/src/gl/wrap/gles.c
+index c647cee4..82e29a88 100644
+--- a/src/gl/wrap/gles.c
++++ b/src/gl/wrap/gles.c
+@@ -879,9 +879,21 @@ AliasExport(GLint,glGetAttribLocation,,(GLuint program, const GLchar * name));
+ #ifndef skip_glGetBooleanv
+ void APIENTRY_GL4ES gl4es_glGetBooleanv(GLenum pname, GLboolean * params) {
+     void gles_glGetBooleanv(glGetBooleanv_ARG_EXPAND); //LOAD_GLES(glGetBooleanv);
++    int gl4es_commonGet(GLenum pname, GLfloat *params);
+ #ifndef direct_glGetBooleanv
+     PUSH_IF_COMPILING(glGetBooleanv)
+ #endif
++    // Try gl4es' own state first (single-value pnames): desktop-GL queries
++    // like GL_RGBA_MODE or GL_DOUBLEBUFFER don't exist in the GLES driver
++    // and would silently return 0 (INVALID_ENUM leaves the value untouched),
++    // which legacy fixed-function code takes load-bearing decisions on
++    // (e.g. SGI Inventor reads GL_RGBA_MODE==0 as a color-index framebuffer
++    // and stops sending materials). Array pnames still go to the driver.
++    GLfloat fparam;
++    if (gl4es_commonGet(pname, &fparam)) {
++        if (params) *params = (fparam != 0.0f) ? GL_TRUE : GL_FALSE;
++        return;
++    }
+     gles_glGetBooleanv(pname, params);
+ }
+ AliasExport(void,glGetBooleanv,,(GLenum pname, GLboolean * params));

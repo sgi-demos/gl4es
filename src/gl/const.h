@@ -8,6 +8,9 @@
 #define GL_MAJOR_VERSION            0x821B
 #define GL_MINOR_VERSION            0x821C
 #define GL_DOUBLEBUFFER				0x0C32
+#define GL_INDEX_MODE				0x0C30
+#define GL_RGBA_MODE				0x0C31
+#define GL_STEREO				0x0C33
 /* texture mapping */
 #define GL_TEXTURE_ENV              0x2300
 #define GL_TEXTURE_ENV_MODE         0x2200

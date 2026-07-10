@@ -15,6 +15,10 @@ typedef struct {
     GLfloat x;
     GLfloat y;
     GLfloat z;
+    // current raster color: latched from the current color when the raster
+    // position is set (GL spec), NOT the color current at glBitmap time
+    GLfloat color[4];
+    GLboolean colorValid;
 } rasterpos_t;
 
 typedef struct {

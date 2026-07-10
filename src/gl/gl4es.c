@@ -892,13 +892,15 @@ void APIENTRY_GL4ES gl4es_glCallLists(GLsizei n, GLenum type, const GLvoid *list
     #define call(name, type) \
         case name: gl4es_glCallList(((type *)lists)[i] + glstate->list.base); break
 
-    // seriously wtf
+    // GL_N_BYTES: big-endian byte concatenation per the GL spec
+    // (list = b0*256^(N-1) + ... + bN-1); e.g. GL_2_BYTES {0x00,0x41}
+    // must select list 0x0041.
     #define call_bytes(name, stride)                             \
         case name:                                               \
             l = (GLubyte *)lists;                                \
             list = 0;                                            \
             for (j = 0; j < stride; j++) {                       \
-                list += *(l + (i * stride + j)) << (stride - j); \
+                list += *(l + (i * stride + j)) << (8 * (stride - 1 - j)); \
             }                                                    \
             gl4es_glCallList(list + glstate->list.base);                  \
             break

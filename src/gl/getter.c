@@ -295,6 +295,13 @@ int gl4es_commonGet(GLenum pname, GLfloat *params) {
         case GL_DOUBLEBUFFER:
             *params = 1;    // Fake double buffering...
             break;
+        case GL_RGBA_MODE:
+            *params = 1;    // GLES framebuffers are always RGBA...
+            break;
+        case GL_INDEX_MODE:
+        case GL_STEREO:
+            *params = 0;    // ...never color-index, never stereo
+            break;
         case GL_MAX_ELEMENTS_INDICES:
             *params = 1024;
             break;

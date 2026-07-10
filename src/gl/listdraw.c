@@ -459,10 +459,14 @@ void draw_renderlist(renderlist_t *list) {
         }
 		// bitmaps
         if (list->bitmaps) {
+            // recorded bitmaps are stored tightly packed (see gl4es_glBitmap)
+            GLuint old_align = glstate->texture.unpack_align;
+            glstate->texture.unpack_align = 1;
             for (int i=0; i<list->bitmaps->count; i++) {
                 bitmap_list_t *l = &list->bitmaps->list[i];
                 gl4es_glBitmap(l->width, l->height, l->xorig, l->yorig, l->xmove, l->ymove, l->bitmap);
             }
+            glstate->texture.unpack_align = old_align;
         }
 
         if (list->material) {

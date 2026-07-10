@@ -879,9 +879,21 @@ AliasExport(GLint,glGetAttribLocation,,(GLuint program, const GLchar * name));
 #ifndef skip_glGetBooleanv
 void APIENTRY_GL4ES gl4es_glGetBooleanv(GLenum pname, GLboolean * params) {
     void gles_glGetBooleanv(glGetBooleanv_ARG_EXPAND); //LOAD_GLES(glGetBooleanv);
+    int gl4es_commonGet(GLenum pname, GLfloat *params);
 #ifndef direct_glGetBooleanv
     PUSH_IF_COMPILING(glGetBooleanv)
 #endif
+    // Try gl4es' own state first (single-value pnames): desktop-GL queries
+    // like GL_RGBA_MODE or GL_DOUBLEBUFFER don't exist in the GLES driver
+    // and would silently return 0 (INVALID_ENUM leaves the value untouched),
+    // which legacy fixed-function code takes load-bearing decisions on
+    // (e.g. SGI Inventor reads GL_RGBA_MODE==0 as a color-index framebuffer
+    // and stops sending materials). Array pnames still go to the driver.
+    GLfloat fparam;
+    if (gl4es_commonGet(pname, &fparam)) {
+        if (params) *params = (fparam != 0.0f) ? GL_TRUE : GL_FALSE;
+        return;
+    }
     gles_glGetBooleanv(pname, params);
 }
 AliasExport(void,glGetBooleanv,,(GLenum pname, GLboolean * params));
