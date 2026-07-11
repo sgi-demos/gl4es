@@ -1,0 +1,17 @@
+diff --git a/src/gl/raster.c b/src/gl/raster.c
+index 01178143..cfe553de 100644
+--- a/src/gl/raster.c
++++ b/src/gl/raster.c
+@@ -46,7 +46,11 @@ void APIENTRY_GL4ES gl4es_glRasterPos3f(GLfloat x, GLfloat y, GLfloat z) {
+     w2=glstate->raster.viewport.width/2.0f;
+     h2=glstate->raster.viewport.height/2.0f;
+ 
+-    if ((transl[0] * w2 + w2) >= 0 && (transl[1] * h2 + h2) >= 0 && transl[2] >= 0) {
++    // NDC z is valid across the whole view volume [-1, 1]; rejecting the
++    // near half left the raster pos stale for e.g. orthographic scenes
++    // that place bitmap text in front of the mid-plane.
++    if ((transl[0] * w2 + w2) >= 0 && (transl[1] * h2 + h2) >= 0 &&
++	transl[2] >= -1.0f && transl[2] <= 1.0f) {
+       glstate->raster.rPos.x = transl[0]*w2+w2;
+       glstate->raster.rPos.y = transl[1]*h2+h2;
+       glstate->raster.rPos.z = transl[2];
