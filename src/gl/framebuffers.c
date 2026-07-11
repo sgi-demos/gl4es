@@ -1225,6 +1225,7 @@ void createMainFBO(int width, int height) {
 
     // If there is already a Framebuffer created, let's delete it.... unless it's already the right size!
     int createIt = 1;
+    int oldw = glstate->fbo.mainfbo_width, oldh = glstate->fbo.mainfbo_height;
     if (glstate->fbo.mainfbo_fbo) {
         if (width==glstate->fbo.mainfbo_width && height==glstate->fbo.mainfbo_height)
             return;
@@ -1240,11 +1241,14 @@ void createMainFBO(int width, int height) {
 
     glstate->fbo.mainfbo_width = width;
     glstate->fbo.mainfbo_height = height;
-    // Keep the default-framebuffer size in sync when it was never established:
-    // on NOEGL hosts (e.g. Emscripten) NewGLState skips the GL_VIEWPORT grab,
+    // Keep the default-framebuffer size in sync when it was never established
+    // (on NOEGL hosts, e.g. Emscripten, NewGLState skips the GL_VIEWPORT grab,
     // leaving fbowidth/fboheight at 0, which made blitMainFBO() set a 0x0
-    // viewport and blit nothing.
-    if(!glstate->fbowidth || !glstate->fboheight) {
+    // viewport and blit nothing) or when it was tracking the previous main
+    // FBO size (same NOEGL hosts on a surface resize: the caller re-creates
+    // the main FBO, and the blit destination must follow).
+    if(!glstate->fbowidth || !glstate->fboheight ||
+       (glstate->fbowidth == oldw && glstate->fboheight == oldh)) {
         glstate->fbowidth  = width;
         glstate->fboheight = height;
     }
